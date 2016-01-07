@@ -19,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,9 +37,13 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import blade.kit.IOKit;
+import blade.kit.ObjectKit;
+import blade.kit.StringKit;
+import blade.kit.text.HTMLFilter;
+
 import com.blade.Blade;
 import com.blade.route.Route;
-import com.blade.web.http.HttpException;
 import com.blade.web.http.HttpMethod;
 import com.blade.web.http.Path;
 import com.blade.web.http.Request;
@@ -46,9 +51,6 @@ import com.blade.web.multipart.FileItem;
 import com.blade.web.multipart.Multipart;
 import com.blade.web.multipart.MultipartException;
 import com.blade.web.multipart.MultipartHandler;
-
-import blade.kit.IOKit;
-import blade.kit.text.HTMLFilter;
 
 /**
  * ServletRequest
@@ -64,18 +66,24 @@ public class ServletRequest implements Request {
 	
 	private HttpServletRequest request;
 	
-	protected Map<String,String> pathParams = new HashMap<String,String>();
+	protected Map<String,String> pathParams = null;
 	
-	private Map<String,String> multipartParams = new HashMap<String,String>();
+	private Map<String,String> multipartParams = null;
 
-	private List<FileItem> files = new ArrayList<FileItem>();
+	private List<FileItem> files = null;
 	
 	private Session session = null;
 	
-	private Blade blade = Blade.me();
+	private Blade blade = null;
+	
+	private boolean isAbort = false;
 	
 	public ServletRequest(HttpServletRequest request) throws MultipartException, IOException {
 		this.request = request;
+		this.pathParams = new HashMap<String,String>();
+		this.multipartParams = new HashMap<String,String>();
+		this.files = new ArrayList<FileItem>();
+		this.blade = Blade.me();
 		init();
 	}
 	
@@ -216,8 +224,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Integer paramAsInt(String name) {
 		String value = param(name);
-		if (null != value) {
-			return Integer.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Integer.parseInt(value);
 		}
 		return null;
 	}
@@ -225,8 +233,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Long paramAsLong(String name) {
 		String value = param(name);
-		if (null != value) {
-			return Long.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Long.parseLong(value);
 		}
 		return null;
 	}
@@ -234,8 +242,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Boolean paramAsBool(String name) {
 		String value = param(name);
-		if (null != value) {
-			return Boolean.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Boolean.parseBoolean(value);
 		}
 		return null;
 	}
@@ -293,8 +301,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Integer queryAsInt(String name) {
 		String value = query(name);
-		if (null != value) {
-			return Integer.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Integer.parseInt(value);
 		}
 		return null;
 	}
@@ -302,8 +310,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Long queryAsLong(String name) {
 		String value = query(name);
-		if (null != value) {
-			return Long.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Long.parseLong(value);
 		}
 		return null;
 	}
@@ -311,8 +319,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Boolean queryAsBool(String name) {
 		String value = query(name);
-		if (null != value) {
-			return Boolean.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Boolean.parseBoolean(value);
 		}
 		return null;
 	}
@@ -320,8 +328,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Float queryAsFloat(String name) {
 		String value = query(name);
-		if (null != value) {
-			return Float.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Float.parseFloat(value);
 		}
 		return null;
 	}
@@ -329,8 +337,8 @@ public class ServletRequest implements Request {
 	@Override
 	public Double queryAsDouble(String name) {
 		String value = query(name);
-		if (null != value) {
-			return Double.valueOf(value);
+		if (StringKit.isNotBlank(value)) {
+			return Double.parseDouble(value);
 		}
 		return null;
 	}
@@ -496,6 +504,35 @@ public class ServletRequest implements Request {
 	}
 	
 	@Override
+	public void setRoute(Route route) {
+		this.route = route;
+		initPathParams(route.getPath());
+	}
+	
+	@Override
+	public Route route() {
+		return this.route;
+	}
+
+	@Override
+	public void abort() {
+		this.isAbort = true;
+	}
+	
+	@Override
+	public boolean isAbort() {
+		 return this.isAbort;
+	}
+	
+	@Override
+	public <T> T model(String slug, Class<? extends Serializable> clazz) {
+		if(StringKit.isNotBlank(slug) && null != clazz){
+			return ObjectKit.model(slug, clazz, querys());
+		}
+		return null;
+	}
+	
+	@Override
 	public FileItem[] files() {
 		FileItem[] fileParts = new FileItem[files.size()];
 		for (int i=0; i < files.size(); i++) {
@@ -508,7 +545,7 @@ public class ServletRequest implements Request {
 	public BodyParser body() {
 		return new BodyParser() {
 			@Override
-			public String asString() throws HttpException {
+			public String asString() {
 				try {
 					BufferedReader reader = new BufferedReader( new InputStreamReader(request.getInputStream()) );
 					StringBuilder sb = new StringBuilder();
@@ -522,17 +559,19 @@ public class ServletRequest implements Request {
 
 					return data;
 				} catch (IOException e) {
-					throw new HttpException(e);
+					e.printStackTrace();
 				}
+				return null;
 			}
 
 			@Override
-			public InputStream asInputStream() throws HttpException {
+			public InputStream asInputStream() {
 				try {
 					return request.getInputStream();
 				} catch (IOException e) {
-					throw new HttpException(e);
+					e.printStackTrace();
 				}
+				return null;
 			}
 
 			@Override
@@ -545,17 +584,6 @@ public class ServletRequest implements Request {
 				return null;
 			}
 		};
-	}
-
-	@Override
-	public void setRoute(Route route) {
-		this.route = route;
-		initPathParams(route.getPath());
-	}
-	
-	@Override
-	public Route route() {
-		return this.route;
 	}
 
 }

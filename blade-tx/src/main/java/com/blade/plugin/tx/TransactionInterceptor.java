@@ -1,37 +1,42 @@
 package com.blade.plugin.tx;
 
-import java.sql.SQLException;
-
 import javax.sql.DataSource;
 
 import com.blade.aop.AbstractMethodInterceptor;
 import com.blade.aop.annotation.AfterAdvice;
 import com.blade.aop.annotation.BeforeAdvice;
+import com.blade.aop.intercept.MethodInvocation;
 
 public class TransactionInterceptor extends AbstractMethodInterceptor {
 	
-	private TransactionManage transactionManager;
+	private TransactionHolder local = null;
 	
 	public TransactionInterceptor(DataSource dataSource) {
-		this.transactionManager = new TransactionManage(dataSource);
+		local = new TransactionHolder(dataSource);
 	}
 	
 	@BeforeAdvice(expression = "@com.blade.plugin.tx.annotation.Transactional")
 	public void beforeAdvice() {
+		local.beginTransaction();
+	}
+	
+	@Override
+	public Object invoke(MethodInvocation invocation) {
 		try {
-			transactionManager.start();
-		} catch (SQLException e) {
-			throw new RuntimeException("begin transaction failure", e);
+			return super.invoke(invocation);
+		} catch (Exception e) {
+			local.rollback();
+			e.printStackTrace();
+		} catch (Throwable e) {
+			local.rollback();
+			e.printStackTrace();
 		}
+		return null;
 	}
 	
 	@AfterAdvice(expression = "@com.blade.plugin.tx.annotation.Transactional")
 	public void afterAdvice() {
-		try {
-			transactionManager.commit();
-		} catch (SQLException e) {
-			throw new RuntimeException("commit transaction failure", e);
-		}
+		local.commit();
 	}
 	
 }

@@ -24,7 +24,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import blade.kit.StringKit;
-import blade.kit.base.ThrowableKit;
 import blade.kit.log.Logger;
 
 import com.blade.Blade;
@@ -38,6 +37,7 @@ import com.blade.web.http.HttpStatus;
 import com.blade.web.http.Path;
 import com.blade.web.http.Request;
 import com.blade.web.http.Response;
+import com.blade.web.http.ResponsePrint;
 import com.blade.web.http.wrapper.ServletRequest;
 import com.blade.web.http.wrapper.ServletResponse;
 
@@ -84,14 +84,17 @@ public class AsynRequestHandler implements Runnable {
             // If it is static, the resource is handed over to the filter
             if(null != blade.staticFolder() && blade.staticFolder().length > 0){
             	if(!filterStaticFolder(uri)){
-            		asyncContext.complete();
-            		return;
+            		if(LOGGER.isDebugEnabled()){
+                    	LOGGER.debug("Request : " + method + "\t" + uri);
+                    }
+            		String realpath = httpRequest.getServletContext().getRealPath(uri);
+            		ResponsePrint.printStatic(uri, realpath, httpResponse);
+    				return;
             	}
             }
             
-            if(blade.debug()){
-            	LOGGER.debug("Request : " + method + "\t" + uri);
-            }
+            LOGGER.info("Request : " + method + "\t" + uri);
+            
             
             // Create Request
     		Request request = new ServletRequest(httpRequest);
@@ -107,39 +110,30 @@ public class AsynRequestHandler implements Runnable {
 			// If find it
 			if (route != null) {
 				request.setRoute(route);
+				
+				boolean result = false;
 				// before inteceptor
 				List<Route> befores = routeMatcher.getBefore(uri);
-				invokeInterceptor(request, response, befores);
-				
-				// execute
-				handle(request, response, route);
-				
-				// after inteceptor
-				List<Route> afters = routeMatcher.getAfter(uri);
-				invokeInterceptor(request, response, afters);
-				asyncContext.complete();
-				return;
+				result = invokeInterceptor(request, response, befores);
+				if(result){
+					// execute
+					handle(request, response, route);
+					
+					if(!request.isAbort()){
+						// after inteceptor
+						List<Route> afters = routeMatcher.getAfter(uri);
+						invokeInterceptor(request, response, afters);
+					}
+				}
+			} else {
+				// Not found
+				render404(response, uri);
 			}
-			
-			// Not found
-			render404(response, uri);
 			asyncContext.complete();
 			return;
 		} catch (Exception e) {
-        	String error = ThrowableKit.getStackTraceAsString(e);
-            LOGGER.error(error);
-            ThrowableKit.propagate(e);
-            
-        	httpResponse.setStatus(500);
-        	// Write content to the browser
-            if (!httpResponse.isCommitted()) {
-                response.html(Const.INTERNAL_ERROR);
-                asyncContext.complete();
-                return;
-            }
+			ResponsePrint.printError(e, 500, httpResponse);
         }
-        asyncContext.complete();
-        return;
 	}
 	
 	/**
@@ -166,11 +160,16 @@ public class AsynRequestHandler implements Runnable {
 	 * @param request		request object
 	 * @param response		response object
 	 * @param interceptors	execute the interceptor list
+	 * @return				Return execute is ok
 	 */
-	private void invokeInterceptor(Request request, Response response, List<Route> interceptors) {
+	private boolean invokeInterceptor(Request request, Response response, List<Route> interceptors) {
 		for(Route route : interceptors){
 			handle(request, response, route);
+			if(request.isAbort()){
+				return false;
+			}
 		}
+		return true;
 	}
 
 	/**

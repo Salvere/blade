@@ -57,7 +57,7 @@ public class Blade {
     /**
      * Servlet asynchronous
      */
-    private boolean isAsyn = true;
+    private boolean isAsyn = false;
     
     /**
      * Blade initialize config class
@@ -313,14 +313,13 @@ public class Blade {
 	}
 	
 	/**
-	 * 注册一个函数式的路由
-	 * 方法上指定请求类型（同时指定HttpMethod的方式是：post:saveUser，如不指定则为HttpMethod.ALL）
-	 * 
-	 * @param path			路由url	
-	 * @param clazz			路由处理类
-	 * @param method		路由处理方法名称
-	 * @return Blade		返回Blade单例实例
-	 */
+     * Add a route
+     * 
+     * @param path			route path
+     * @param target		Target object for routing
+     * @param method		The method name of the route (at the same time, the HttpMethod is specified: post:saveUser, if not specified, HttpMethod.ALL)
+     * @return				return blade
+     */
 	public Blade route(String path, Class<?> clazz, String method){
 		routers.route(path, clazz, method);
 		return this;
@@ -588,11 +587,11 @@ public class Blade {
     /**
 	 * Setting blade run mode
 	 * 
-	 * @param isdebug	is debug mode
+	 * @param isDev		is dev mode
 	 * @return			return blade
 	 */
-	public Blade debug(boolean isdebug){
-		config.setDebug(isdebug);
+	public Blade isDev(boolean isDev){
+		config.setDev(isDev);
 		return this;
 	}
 	
@@ -738,10 +737,10 @@ public class Blade {
     }
     
     /**
-	 * @return	Return is debug mode
+	 * @return	Return is dev mode
 	 */
-	public boolean debug(){
-		return config.isDebug();
+	public boolean isDev(){
+		return config.isDev();
 	}
 	
 	/**

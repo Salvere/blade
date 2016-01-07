@@ -18,7 +18,7 @@ If you like it, please [star and fork it](https://github.com/biezhi/blade). Than
 * [x] Lightweight: the code is simple and the structure is clear
 * [x] Modular (you can choose which components to use)
 * [x] Supports plug-in extension mechanism
-* [x] Restful style routing interface
+* [x] RESTful style routing interface
 * [x] Supports multiple configuration files (currently properties, json and coding)
 * [x] Embedded jetty server and template engine support
 * [x] Supports JDK 1.6 and up
@@ -26,25 +26,30 @@ If you like it, please [star and fork it](https://github.com/biezhi/blade). Than
 ## Overview
 
 * Simplicity: The design is simple, easy to understand and doesn't introduce many layers between you and the standard library. The goal of this project is that the users should be able to understand the whole framework in a single day.
-* Elegance: `blade` supports the REST style routing interface, has no invasive interceptors and provides the writing of DSL grammar.
+* Elegance: `blade` supports the RESTful style routing interface, has no invasive interceptors and provides the writing of DSL grammar.
 
 ## Get Start
 
 To get started, first [include the Blade library](http://bladejava.com/docs/intro/getting_start) :
 
-`Maven` config：
+Grab via `Maven`：
 
-```sh
+```xml
 <dependency>
 	<groupId>com.bladejava</groupId>
 	<artifactId>blade-core</artifactId>
-	<version>1.5.0</version>
+	<version>1.5.1</version>
 </dependency>
 <dependency>
-        <groupId>com.bladejava</groupId>
-        <artifactId>blade-startup</artifactId>
-        <version>1.0.1</version>
+	<groupId>com.bladejava</groupId>
+	<artifactId>blade-startup</artifactId>
+	<version>1.0.1</version>
 </dependency>
+```
+or `Gradle`:
+```sh
+compile 'com.bladejava:blade-core:1.5.1'
+compile 'com.bladejava:blade-startup:1.0.1'
 ```
 
 Create `Main` method like this：
@@ -62,7 +67,7 @@ public class App {
 }
 ```
 
-Run it and point your browser to http://localhost:9001. There you go, you've just created your first Blade app!
+Run it and point your browser to [http://localhost:9001](http://localhost:9001). There you go, you've just created your first Blade app!
 
 ## API Example
 
@@ -115,15 +120,13 @@ public static void main(String[] args) {
 
 ```java
 public void upload_img(Request request, Response response){
-		
-	JsonObject jsonObject = new JsonObject();
-
+	
 	FileItem[] fileItems = request.files();
 	if(null != fileItems && fileItems.length > 0){
 		
 		FileItem fileItem = fileItems[0];
 		File file = fileItem.getFile();
-
+		
 		String fileRealPath = "your upload file path!";
 		
 		nioTransferCopy(file, fileRealPath);
@@ -183,11 +186,11 @@ public Long getUserCount(String email){
 
 You may refer to these examples for additional guidance:
 
-+ [Hello](https://github.com/blade-samples/hello)
++ [Hello Blade](https://github.com/blade-samples/hello)
 + [API Doc](http://bladejava.com/apidocs)
 + [User Guide](http://bladejava.com/docs)
++ [Version Changes](LAST_VERSION.md)
 + [Examples](https://github.com/blade-samples)
-+ [Version](LAST_VERSION.md)
 
 ## Plan
 
@@ -204,20 +207,20 @@ You may refer to these examples for additional guidance:
 - Blog:[https://biezhi.me](https://biezhi.me)
 - Mail: biezhi.me@gmail.com
 
+## Contributor
+
+Thank you very much for the developers to help in the project, if you are willing to contribute, welcome!
+
+- [mfarid](https://github.com/mfarid)
+- [daimajia](https://github.com/daimajia)
+- [shenjie1993](https://github.com/shenjie1993)
+- [sumory](https://github.com/sumory)
+- [udaykadaboina](https://github.com/udaykadaboina)
+- [SyedWasiHaider](https://github.com/SyedWasiHaider)
+- [Awakens](https://github.com/Awakens)
+- [shellac](https://github.com/shellac)
+- [SudarAbisheck](https://github.com/SudarAbisheck)
+
 ## Licenses
 
-```
-Copyright 2015 biezhi
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-   http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
+Please see [Apache License](LICENSE)
